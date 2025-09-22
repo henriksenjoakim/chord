@@ -1,11 +1,13 @@
 #!/usr/bin/env sh
 set -eu
 
-NUM=${1:-3}
+M={$1}
+TTL={$2}
+TESTMODE={$3}
 CWD=$PWD
 
 echo "Checking environment"
-sleep 1
+sleep 2
 
 if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
   echo "Environment is set up, skipping setup"
@@ -14,7 +16,7 @@ else
   python3 -m venv venv
 fi
 source venv/bin/activate
-sleep 5
+sleep 2
 if pip list | grep Flask; then
   echo "Flask is installed, skipping.."
 else
@@ -28,28 +30,44 @@ else
   echo "Socket not found, installing.."
   pip install sockets
 fi
+
+if pip list | grep requests; then
+  echo "Requests is installed, skipping.."
+else
+  echo "Requestst not found, installing.."
+  pip install requests
+fi
+
 deactivate
 sleep 2
 echo "Swarming, please wait..."
 sleep 2
 
-HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$NUM")
+HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 
+RINGSIZE=$(echo "2^$M" | bc)
+echo "Setting up with m = $2 Ringsize = $result"
+sleep 2
+port=$(shuf -i 30000-65000 -n 1)
 JSON_STR="["
-
-first=1
+ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
+echo "Setting up on first node on $host:$port"
+NODE=$host
+JSON_STR="$JSON_STR, "
+JSON_STR="$JSON_STR\"${host}:${port}\""
+#first=1
 for host in $HOSTS; do
-  port=$(shuf -i 30000-65000 -n 1)
+  #port=$(shuf -i 30000-65000 -n 1)
   echo "Setting up on $host:$port"
-  #json="[\"$host:$port\"]"
-  #echo "starting server"
-  if [ $first -eq 0 ]; then
-    JSON_STR="$JSON_STR, "
-  fi
+  ##json="[\"$host:$port\"]"
+  ##echo "starting server"
+  #if [ $first -eq 0 ]; then
+  #  JSON_STR="$JSON_STR, "
+  #fi
   JSON_STR="$JSON_STR\"${host}:${port}\""
-  first=0
-  #ENTRIES+=("\"${host}:${port}\"")
-  ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port > $CWD/tmp.log 2>&1 &"
+  #first=0
+  ##ENTRIES+=("\"${host}:${port}\"")
+  ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $NODE > $CWD/tmp.log 2>&1 &"
 done
 echo "Waiting for startups..."
 sleep 3
