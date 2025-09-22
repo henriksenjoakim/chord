@@ -48,7 +48,8 @@ RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 echo "Setting up with m = $2 Ringsize = $RINGSIZE"
 sleep 2
-JSON_STR="["
+JSON_STR=""
+FIRSTNODE=""
 first=1
 for host in $HOSTS; do
   port=$(shuf -i 30000-65000 -n 1)
@@ -57,28 +58,20 @@ for host in $HOSTS; do
     FIRSTNODE=$host
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
     echo "Setting up on first node on $host:$port"
-  fi
-  ##json="[\"$host:$port\"]"
-  ##echo "starting server"
-  if [ $first -eq 0 ]; then
-    JSON_STR="$JSON_STR, "
-  fi
-  JSON_STR="$JSON_STR\"${host}:${port}\""
-  first=0
-  ##ENTRIES+=("\"${host}:${port}\"")
+    first=0
   if [ $first -eq 0 ]; then
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
   fi
+  JSON_STR="${host}:${port} "
   sleep 1
 done
 echo "Waiting for startups..."
 sleep 3
-JSON_STR="$JSON_STR]"
 echo "Servers are running on:"
-echo "$JSON_STR "
+echo "$JSON_STR"
 echo "Servers will automatically stop in 30 seconds for safety"
 echo "Running testscript on $JSON_STR"
 sleep 1
-python3 testscript.py "$JSON_STR"
+#python3 testscript.py "$JSON_STR"
 #./clean.sh
 echo "Run script done"
