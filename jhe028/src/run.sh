@@ -1,9 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
-M={$1}
-TTL={$2}
-TESTMODE={$3}
+M=$1
+TTL=$2
 CWD=$PWD
 
 echo "Checking environment"

@@ -93,8 +93,8 @@ class Node:
             # Ask successor to update (stabalise)
             self.rpcPost(self.successor, "/update", {})
             # Get successor's predecessor
-            #resp = self.rpcGet(self.successor, "/get_pedecessor")
-            #pred = resp.get("predecessor")
+            # resp = self.rpcGet(self.successor, "/get_pedecessor")
+            # pred = resp.get("predecessor")
             pred = self.getRemotePredecessor(self.successor)
             if pred:
                 self.rpcPost(pred, "/update", {})  
@@ -108,9 +108,9 @@ class Node:
 
     def notify_entire_ring(self, do_fix_fingers: bool = True, hop_cap: Optional[int] = None):
         """
-        Walk the ring via successors, once, calling /update (stabilize) and /repair_hand.
+        Walk the ring via successors, once, calling /update and /repair_hand.
         """
-        # sensible cap: at most 2^m + 1 hops
+
         cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
         visited = set()
         steps = 0
@@ -122,7 +122,7 @@ class Node:
         while curr and (curr.hostname, curr.port) not in visited and steps < cap:
             visited.add((curr.hostname, curr.port))
 
-            # ask node to stabilize once
+            # ask node to update once
             try:
                 self.rpcPost(curr, "/update", {})
             except Exception:
@@ -147,7 +147,7 @@ class Node:
 
             steps += 1
 
-            # stop once we’re back at ourselves
+            # stop once Im back 
             if (curr.hostname, curr.port) == (self.nodeInfo.hostname, self.nodeInfo.port):
                 break
 
@@ -155,8 +155,7 @@ class Node:
 
     def walk_ring(self, hop_cap: Optional[int] = None) -> list[NodeInfo]:
         """
-        Follow successor pointers starting from self until we loop back
-        or hit a cap. Returns NodeInfo objects in ring order.
+        Follow successor pointers around until i get back or hit cap
         """
         cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
         visited = set()
@@ -168,7 +167,7 @@ class Node:
             nodes.append(curr)
             visited.add((curr.hostname, curr.port))
             try:
-                st = self.rpcGet(curr, "/state")  # needs your /state endpoint
+                st = self.rpcGet(curr, "/state") 
                 succ = st.get("successor")
                 if not succ:
                     break
@@ -181,10 +180,7 @@ class Node:
 
     def get_all_hosts_json(self) -> dict:
         """
-        Build a JSON-friendly payload of all nodes in the ring.
-        - 'addresses' are "hostname:port" strings
-        - 'hostnames' are unique hostnames (deduped)
-        - 'nodes' are full records (hostname, port, id)
+        Create json of netowkr
         """
         nodes = self.walk_ring()
         addresses = [f"{n.hostname}:{n.port}" for n in nodes]
@@ -484,11 +480,11 @@ class Node:
         def _stop_timer(resp):
             if hasattr(g, "_t0"):
                 dt_ms = (time.perf_counter() - g._t0) * 1000
-                # Standardized timing header (shows in DevTools)
+
                 resp.headers["Server-Timing"] = f"app;dur={dt_ms:.2f}"
-                # Convenience/custom header
+
                 resp.headers["X-Response-Time"] = f"{dt_ms:.2f} ms"
-                # Expose to JS for cross-origin/cors cases (optional)
+
                 resp.headers["Timing-Allow-Origin"] = "*"
                 resp.headers["Access-Control-Expose-Headers"] = "Server-Timing, X-Response-Time"
                 print(f"Request Time: {dt_ms:.2f}")
