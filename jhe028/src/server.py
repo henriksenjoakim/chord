@@ -29,6 +29,12 @@ def getShaHash(value:str, ringSize: int) -> int:
     hash = int(hashlib.sha1(value.encode("utf-8")).hexdigest(), 16)
     return hash % ringSize
 
+def full_sha1_hex(key: str) -> str:
+    return hashlib.sha1(key.encode("utf-8")).hexdigest()
+
+def chord_id_m_from_full_hex(full_hex: str, ringSize: int) -> int:
+    return int(full_hex, 16) % ringSize 
+
 def shutdown_after(ttl: int):
     '''Force terminate program after given time'''
     time.sleep(ttl)
@@ -49,7 +55,8 @@ class Node:
         self.predecessor = None
         self.finger: list[NodeInfo] = [NodeInfo(hostname, port, hash) for _ in range(m)]
         self.printNodes()
-        self.data = {}
+        #self.data = {}
+        self.data: dict[int, dict[str, str]] = {}
 
     def createRing(self):
         #self.predecessor = None
@@ -192,7 +199,7 @@ class Node:
     def buildFingerTable(self):
         newFingers = []
         for i in range(self.m):
-            start = (self.nodeInfo.nodeID + (2 ** i)) % ringSize
+            start = (self.nodeInfo.nodeID + (2 ** i)) % self.ringSize
             newFingers.append(self.findSuccessor(start))
         self.finger = newFingers
 
@@ -272,12 +279,19 @@ class Node:
             #return self.nodeInfo
         return self.getRemoteSuccessor(fingerNode, targetID)
 
-    def storeValue(self, key, value):
-        keyID = getShaHash(key, self.ringSize)
+    def storeValue(self, key, value) -> bool:
+        #keyID = getShaHash(key, self.ringSize)
+
+        full_hex = full_sha1_hex(key)
+        keyID = chord_id_m_from_full_hex(full_hex, self.ringSize)
+
         owner = self.findSuccessor(keyID)
         # Check if I am the owner
         if (owner.hostname == self.nodeInfo.hostname) and (owner.port == self.nodeInfo.port):
-            self.data[keyID] = value
+            #self.data[keyID] = value
+            bucket = self.data.setdefault(keyID, {})
+            #bucket[key] = value
+            bucket[full_hex] = value
             return True
         else:
             url = f"http://{owner.hostname}:{owner.port}/storage/{key}"
@@ -289,16 +303,20 @@ class Node:
                 print("EROR FORWARDING")
                 return False
         
-    def getValue(self, key):
-        keyID = getShaHash(key, self.ringSize)
+    def getValue(self, key) -> Optional[str]:
+        #keyID = getShaHash(key, self.ringSize)
+        full_hex = full_sha1_hex(key)
+        keyID = chord_id_m_from_full_hex(full_hex, self.ringSize)
         owner = self.findSuccessor(keyID)
         if (owner.hostname == self.nodeInfo.hostname) and (owner.port == self.nodeInfo.port):
-            value = self.data.get(keyID)
-            if value is not None:
-                pass
-            else:
-                pass 
-            return value
+            #return self.data.get(keyID, {}).get(key)
+            return self.data.get(keyID, {}).get(full_hex)
+            #value = self.data.get(keyID)
+            # if value is not None:
+            #     pass
+            # else:
+            #     pass 
+            # return value
         else:
             url = f"http://{owner.hostname}:{owner.port}/storage/{key}"
             try:
