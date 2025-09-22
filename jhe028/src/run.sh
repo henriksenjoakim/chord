@@ -48,6 +48,7 @@ echo "Setting up with m = $2 Ringsize = $RINGSIZE"
 sleep 2
 JSON_STR=""
 FIRSTNODE=""
+CONTACTNODE=""
 first=1
 for host in $HOSTS; do
   port=$(shuf -i 30000-65000 -n 1)
@@ -57,6 +58,7 @@ for host in $HOSTS; do
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
     echo "Setting up on first node on $host:$port"
     JSON_STR="${host}:${port}"
+    CONTACTNODE="${FIRSTNODE}:${port}"
     first=0
   fi
   if [ $first -eq 0 ]; then
@@ -70,8 +72,9 @@ sleep 3
 echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
-echo "Running testscript on $JSON_STR"
+
+echo "Running testscript on $CONTACTNODE"
 sleep 1
-python3 chord-tester.py "$JSON_STR"
+python3 chord-tester.py "$CONTACTNODE"
 #./clean.sh
 echo "Run script done"
