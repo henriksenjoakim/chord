@@ -61,14 +61,14 @@ for host in $HOSTS; do
   if [ $first -eq 0 ]; then
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
   fi
-  JSON_STR="${host}:${port} "
+  JSON_STR="{$JSON_STR} ${host}:${port}"
   sleep 1
 done
 echo "Waiting for startups..."
 sleep 3
 echo "Servers are running on:"
 echo "$JSON_STR"
-echo "Servers will automatically stop in 30 seconds for safety"
+echo "Servers will automatically stop in $TTL seconds"
 echo "Running testscript on $JSON_STR"
 sleep 1
 #python3 testscript.py "$JSON_STR"
