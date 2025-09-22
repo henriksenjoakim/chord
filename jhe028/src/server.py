@@ -274,7 +274,7 @@ class Node:
 
     def storeValue(self, key, value):
         keyID = getShaHash(key, self.ringSize)
-        owner = self.findSuccessor(key)
+        owner = self.findSuccessor(keyID)
         # Check if I am the owner
         if (owner.hostname == self.nodeInfo.hostname) and (owner.port == self.nodeInfo.port):
             self.data[keyID] = value
@@ -282,7 +282,8 @@ class Node:
         else:
             url = f"http://{owner.hostname}:{owner.port}/storage/{key}"
             try:
-                resp = requests.put(url, "/storage/{keyID}", timeout=REQUEST_TIMEOUT)
+                resp = requests.put(url, data=value, timeout=REQUEST_TIMEOUT)
+                #resp = requests.put(url, "/storage/{keyID}", timeout=REQUEST_TIMEOUT)
                 return resp.ok
             except:
                 return False
