@@ -286,6 +286,7 @@ class Node:
                 #resp = requests.put(url, "/storage/{keyID}", timeout=REQUEST_TIMEOUT)
                 return resp.ok
             except:
+                print("EROR FORWARDING")
                 return False
         
     def getValue(self, key):
@@ -293,6 +294,10 @@ class Node:
         owner = self.findSuccessor(keyID)
         if (owner.hostname == self.nodeInfo.hostname) and (owner.port == self.nodeInfo.port):
             value = self.data.get(keyID)
+            if value is not None:
+                pass
+            else:
+                pass 
             return value
         else:
             url = f"http://{owner.hostname}:{owner.port}/storage/{key}"
@@ -446,7 +451,8 @@ class Node:
             node.buildFingerTable()
             return jsonify({"ok": True, "fingers": [asdict(f) for f in node.finger]})
         
-        @app.get("/storage/<key>")
+        #@app.get("/storage/<key>")
+        @app.route('/storage/<key>', methods=['GET'])
         def http_get_content(key):
             value = node.getValue(key)
             if value is not None:
@@ -454,7 +460,8 @@ class Node:
             else:
                 return "Not found", 404, {'Content-Type': 'text/plain'}
 
-        @app.put("/storage/<key>")
+        #@app.put("/storage/<key>")
+        @app.route('/storage/<key>', methods=['PUT']) 
         def http_put_content(key):
             value = request.data.decode("utf-8")
             success = node.storeValue(key, value)
