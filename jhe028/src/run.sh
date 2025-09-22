@@ -46,29 +46,30 @@ RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 
 #RINGSIZE=$(echo "2^$M")
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
-
 echo "Setting up with m = $2 Ringsize = $RINGSIZE"
 sleep 2
-port=$(shuf -i 30000-65000 -n 1)
 JSON_STR="["
-ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
-echo "Setting up on first node on $host:$port"
-NODE=$host
-JSON_STR="$JSON_STR, "
-JSON_STR="$JSON_STR\"${host}:${port}\""
-#first=1
+first=1
 for host in $HOSTS; do
-  #port=$(shuf -i 30000-65000 -n 1)
+  port=$(shuf -i 30000-65000 -n 1)
   echo "Setting up on $host:$port"
+  if [ $first -eq 1 ]; then
+    FIRSTNODE=$host
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
+    echo "Setting up on first node on $host:$port"
+  fi
   ##json="[\"$host:$port\"]"
   ##echo "starting server"
-  #if [ $first -eq 0 ]; then
-  #  JSON_STR="$JSON_STR, "
-  #fi
+  if [ $first -eq 0 ]; then
+    JSON_STR="$JSON_STR, "
+  fi
   JSON_STR="$JSON_STR\"${host}:${port}\""
-  #first=0
+  first=0
   ##ENTRIES+=("\"${host}:${port}\"")
-  ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $NODE > $CWD/tmp.log 2>&1 &"
+  if [ $first -eq 0 ]; then
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
+  fi
+  sleep 1
 done
 echo "Waiting for startups..."
 sleep 3
