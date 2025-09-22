@@ -43,8 +43,6 @@ echo "Swarming, please wait..."
 sleep 2
 
 RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
-
-#RINGSIZE=$(echo "2^$M")
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 echo "Setting up with m = $2 Ringsize = $RINGSIZE"
 sleep 2
@@ -59,6 +57,7 @@ for host in $HOSTS; do
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
     echo "Setting up on first node on $host:$port"
     first=0
+  fi
   if [ $first -eq 0 ]; then
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
   fi
