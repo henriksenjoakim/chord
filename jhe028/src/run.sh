@@ -42,10 +42,10 @@ sleep 2
 echo "Swarming, please wait..."
 sleep 2
 
+RINGSIZE=$(echo "2^$M" | bc)
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 
-RINGSIZE=$(echo "2^$M" | bc)
-echo "Setting up with m = $2 Ringsize = $result"
+echo "Setting up with m = $2 Ringsize = $RINGSIZE"
 sleep 2
 port=$(shuf -i 30000-65000 -n 1)
 JSON_STR="["
