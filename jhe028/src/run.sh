@@ -56,12 +56,13 @@ for host in $HOSTS; do
     FIRSTNODE=$host
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
     echo "Setting up on first node on $host:$port"
+    JSON_STR="${host}:${port}"
     first=0
   fi
   if [ $first -eq 0 ]; then
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
+    JSON_STR="$JSON_STR ${host}:${port}"
   fi
-  JSON_STR="{$JSON_STR} ${host}:${port}"
   sleep 1
 done
 echo "Waiting for startups..."
@@ -71,6 +72,6 @@ echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
 echo "Running testscript on $JSON_STR"
 sleep 1
-#python3 testscript.py "$JSON_STR"
+python3 chord-tester.py "$JSON_STR"
 #./clean.sh
 echo "Run script done"

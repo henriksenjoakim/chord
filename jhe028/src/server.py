@@ -178,19 +178,13 @@ class Node:
 
         return nodes
 
-    def get_all_hosts_json(self) -> dict:
+    def get_all_hosts_json(self) -> List[str]:
         """
-        Create json of netowkr
+        Return a JSON-serializable list of node addresses ("host:port") for /network.
         """
         nodes = self.walk_ring()
         addresses = [f"{n.hostname}:{n.port}" for n in nodes]
-        hostnames = list(dict.fromkeys([n.hostname for n in nodes]))  # preserve order, dedupe
-        return {
-            "count": len(nodes),
-            "addresses": addresses,
-            "hostnames": hostnames,
-            "nodes": [asdict(n) for n in nodes],
-        }
+        return addresses
 
     def notifySuccessor(self):
         self.rpcPost(self.successor, "/notify", {"hostname": self.nodeInfo.hostname, "port": self.nodeInfo.port, "id": self.nodeInfo.nodeID})
@@ -470,8 +464,8 @@ class Node:
             
         @app.get("/network")
         def http_network():
-            return jsonify(node.get_all_hosts_json())
-
+            return jsonify(node.get_all_hosts_json()), 200
+        
         @app.before_request
         def start_timer():
             g._t0 = time.perf_counter()
