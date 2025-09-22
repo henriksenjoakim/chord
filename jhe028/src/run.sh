@@ -42,7 +42,9 @@ sleep 2
 echo "Swarming, please wait..."
 sleep 2
 
-RINGSIZE=$(echo "2^$M")
+RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
+
+#RINGSIZE=$(echo "2^$M")
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 
 echo "Setting up with m = $2 Ringsize = $RINGSIZE"
