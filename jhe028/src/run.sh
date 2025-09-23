@@ -6,6 +6,12 @@ TTL=$2
 #CONTPORT=$3
 CWD=$PWD
 
+CURRENTHOST=$(hostname -s)
+if [$CURRENTHOST -eq "ificluster"]; then
+  echo "Does not work from ificluster node, use another node"
+  exit 1
+fi
+
 echo "Checking environment"
 
 if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
@@ -40,7 +46,7 @@ fi
 deactivate
 echo "Swarming, please wait..."
 
-CURRENTHOST=$(hostname -s)
+
 RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 echo "Setting up with m = $2 Ringsize = $RINGSIZE ContactNode = $CURRENTHOST"
@@ -73,9 +79,9 @@ echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
 echo "Testing /network on contact node"
-curl -i $CONTACTNODE/network
+#curl -i $CONTACTNODE/network
 echo "Testing /status on contact node"
-curl -i $CONTACTNODE/status
+#curl -i $CONTACTNODE/status
 echo "Running testscript on $CONTACTNODE"
 python3 chord-tester.py "$CONTACTNODE"
 #./clean.sh
