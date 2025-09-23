@@ -43,7 +43,7 @@ echo "Swarming, please wait..."
 CURRENTHOST=$(hostname -s)
 RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
-echo "Setting up with m = $2 Ringsize = $RINGSIZE"
+echo "Setting up with m = $2 Ringsize = $RINGSIZE ContactNode =$CURRENTHOST"
 JSON_STR=""
 FIRSTNODE=""
 CONTACTNODE=""
@@ -55,9 +55,10 @@ for host in $HOSTS; do
     #FIRSTNODE=$host
     FIRSTNODE=$CURRENTHOST
     #ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
-    ssh -f "$CURRENTHOST" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
+    ssh -f "$FIRSTNODE" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
     JSON_STR="${FIRSTNODE}:${CONTPORT}"
     CONTACTNODE="${FIRSTNODE}:${CONTPORT}"
+    echo "Setting up on $FIRSTNODE:$CONTPORT"
     first=0
   fi
   if [ $first -eq 0 ]; then
