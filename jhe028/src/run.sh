@@ -54,10 +54,7 @@ for host in $HOSTS; do
   if [ $first -eq 1 ]; then
     #FIRSTNODE=$host
     FIRSTNODE=$CURRENTHOST
-    #ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
-    cd $CWD
-    source venv/bin/activate
-    python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
     JSON_STR="${FIRSTNODE}:${CONTPORT}"
     CONTACTNODE="${FIRSTNODE}:${CONTPORT}"
     echo "Setting up on $FIRSTNODE:$CONTPORT"
