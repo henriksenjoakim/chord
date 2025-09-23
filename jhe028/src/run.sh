@@ -7,7 +7,6 @@ CONTPORT=$3
 CWD=$PWD
 
 echo "Checking environment"
-sleep 2
 
 if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
   echo "Environment is set up, skipping setup"
@@ -16,7 +15,7 @@ else
   python3 -m venv venv
 fi
 source venv/bin/activate
-sleep 2
+
 if pip list | grep Flask; then
   echo "Flask is installed, skipping.."
 else
@@ -39,14 +38,12 @@ else
 fi
 
 deactivate
-sleep 2
 echo "Swarming, please wait..."
-sleep 2
 
+CURRENTHOST=$(hostname -s)
 RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
 echo "Setting up with m = $2 Ringsize = $RINGSIZE"
-sleep 2
 JSON_STR=""
 FIRSTNODE=""
 CONTACTNODE=""
@@ -55,9 +52,11 @@ for host in $HOSTS; do
   port=$(shuf -i 30000-65000 -n 1)
   echo "Setting up on $host:$port"
   if [ $first -eq 1 ]; then
-    FIRSTNODE=$host
-    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
-    JSON_STR="${host}:${CONTPORT}"
+    #FIRSTNODE=$host
+    FIRSTNODE=$CURRENTHOST
+    #ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
+    ssh -f "$CURRENTHOST" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
+    JSON_STR="${FIRSTNODE}:${CONTPORT}"
     CONTACTNODE="${FIRSTNODE}:${CONTPORT}"
     first=0
   fi
@@ -73,7 +72,6 @@ echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
 echo "Running testscript on $CONTACTNODE"
-sleep 1
 python3 chord-tester.py "$CONTACTNODE"
 #./clean.sh
 echo "Run script done"
