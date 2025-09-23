@@ -3,7 +3,7 @@ set -eu
 
 M=$1
 TTL=$2
-CONTPORT=$3
+#CONTPORT=$3
 CWD=$PWD
 
 echo "Checking environment"
@@ -43,25 +43,26 @@ echo "Swarming, please wait..."
 CURRENTHOST=$(hostname -s)
 RINGSIZE=$(awk -v x="$M" 'BEGIN { print 2^x }')
 HOSTS=$(bash /share/ifi/available-nodes.sh | awk 'NF' | shuf -n "$RINGSIZE")
-echo "Setting up with m = $2 Ringsize = $RINGSIZE ContactNode =$CURRENTHOST"
+echo "Setting up with m = $2 Ringsize = $RINGSIZE ContactNode = $CURRENTHOST"
 JSON_STR=""
 FIRSTNODE=""
 CONTACTNODE=""
+CONTPORT=""
 first=1
 for host in $HOSTS; do
   port=$(shuf -i 30000-65000 -n 1)
   echo "Setting up on $host:$port"
   if [ $first -eq 1 ]; then
-    #FIRSTNODE=$host
-    FIRSTNODE=$CURRENTHOST
-    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
-    JSON_STR="${FIRSTNODE}:${CONTPORT}"
-    CONTACTNODE="${FIRSTNODE}:${CONTPORT}"
-    echo "Setting up on $FIRSTNODE:$CONTPORT"
+    CONTACTHOST=$host
+    CONTPORT=$port
+    #FIRSTNODE=$CURRENTHOST
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
+    JSON_STR="${host}:${port}"
+    CONTACTNODE="${host}:${port}"
     first=0
   fi
   if [ $first -eq 0 ]; then
-    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE $CONTPORT > $CWD/tmp.log 2>&1 &"
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $CONTACTHOST $CONTPORT > $CWD/tmp.log 2>&1 &"
     JSON_STR="$JSON_STR ${host}:${port}"
   fi
   sleep 1
@@ -72,6 +73,6 @@ echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
 echo "Running testscript on $CONTACTNODE"
-python3 chord-tester.py "$CONTACTNODE"
+#python3 chord-tester.py "$CONTACTNODE"
 #./clean.sh
 echo "Run script done"
