@@ -109,54 +109,54 @@ class Node:
         self.buildFingerTable()
         self.rpcPost(self.successor, "/repair_hand", {})
 
-        #self.notify_entire_ring(True)
-        self.notifyRing(True)
+        self.notify_entire_ring(True)
+        #self.notifyRing(True)
     
-    # def notify_entire_ring(self, do_fix_fingers: bool = True, hop_cap: Optional[int] = None):
-    #     """
-    #     Walk the ring via successors, once, calling /update and /repair_hand.
-    #     """
-    #     cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
-    #     visited = set()
-    #     steps = 0
+    def notify_entire_ring(self, do_fix_fingers: bool = True, hop_cap: Optional[int] = None):
+        """
+        Walk the ring via successors, once, calling /update and /repair_hand.
+        """
+        cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
+        visited = set()
+        steps = 0
 
-    #     curr = self.successor
-    #     if curr is None:
-    #         return {"visited": [], "steps": 0}
+        curr = self.successor
+        if curr is None:
+            return {"visited": [], "steps": 0}
 
-    #     while curr and (curr.hostname, curr.port) not in visited and steps < cap:
-    #         visited.add((curr.hostname, curr.port))
+        while curr and (curr.hostname, curr.port) not in visited and steps < cap:
+            visited.add((curr.hostname, curr.port))
 
-    #         # ask node to update once
-    #         try:
-    #             self.rpcPost(curr, "/update", {})
-    #         except Exception:
-    #             pass
+            # ask node to update once
+            try:
+                self.rpcPost(curr, "/update", {})
+            except Exception:
+                pass
 
-    #         # ask node to rebuild its finger table once (if you exposed it)
-    #         if do_fix_fingers:
-    #             try:
-    #                 self.rpcPost(curr, "/repair_hand", {})
-    #             except Exception:
-    #                 pass
+            # ask node to rebuild its finger table once (if you exposed it)
+            if do_fix_fingers:
+                try:
+                    self.rpcPost(curr, "/repair_hand", {})
+                except Exception:
+                    pass
 
-    #         # move to its successor
-    #         try:
-    #             st = self.rpcGet(curr, "/state")
-    #             nxt = st.get("successor")
-    #             if not nxt:
-    #                 break
-    #             curr = NodeInfo(nxt["hostname"], int(nxt["port"]), int(nxt["nodeID"]))
-    #         except Exception:
-    #             break
+            # move to its successor
+            try:
+                st = self.rpcGet(curr, "/state")
+                nxt = st.get("successor")
+                if not nxt:
+                    break
+                curr = NodeInfo(nxt["hostname"], int(nxt["port"]), int(nxt["nodeID"]))
+            except Exception:
+                break
 
-    #         steps += 1
+            steps += 1
 
-    #         # stop once Im back 
-    #         if (curr.hostname, curr.port) == (self.nodeInfo.hostname, self.nodeInfo.port):
-    #             break
+            # stop once Im back 
+            if (curr.hostname, curr.port) == (self.nodeInfo.hostname, self.nodeInfo.port):
+                break
 
-    #     return {"visited": [f"{h}:{p}" for (h, p) in visited], "steps": steps}
+        return {"visited": [f"{h}:{p}" for (h, p) in visited], "steps": steps}
 
     def walkRing(self, hop_cap: Optional[int] = None) -> list[NodeInfo]:
         """
