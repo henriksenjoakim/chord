@@ -3,6 +3,7 @@ set -eu
 
 M=$1
 TTL=$2
+CONTPORT=$3
 CWD=$PWD
 
 echo "Checking environment"
@@ -55,8 +56,7 @@ for host in $HOSTS; do
   echo "Setting up on $host:$port"
   if [ $first -eq 1 ]; then
     FIRSTNODE=$host
-    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL create > $CWD/tmp.log 2>&1 &"
-    echo "Setting up on first node on $host:$port"
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
     JSON_STR="${host}:${port}"
     CONTACTNODE="${FIRSTNODE}:${port}"
     first=0
@@ -72,7 +72,6 @@ sleep 3
 echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
-
 echo "Running testscript on $CONTACTNODE"
 sleep 1
 python3 chord-tester.py "$CONTACTNODE"

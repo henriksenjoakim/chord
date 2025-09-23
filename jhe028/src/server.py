@@ -25,14 +25,10 @@ class NodeInfo:
     port: int
     nodeID: int
 
-def getShaHash(value:str, ringSize: int) -> int:
-    hash = int(hashlib.sha1(value.encode("utf-8")).hexdigest(), 16)
-    return hash % ringSize
-
-def full_sha1_hex(key: str) -> str:
+def getShaHex(key: str) -> str:
     return hashlib.sha1(key.encode("utf-8")).hexdigest()
 
-def chord_id_m_from_full_hex(full_hex: str, ringSize: int) -> int:
+def getChordID(full_hex: str, ringSize: int) -> int:
     return int(full_hex, 16) % ringSize 
 
 def shutdown_after(ttl: int):
@@ -44,16 +40,18 @@ def shutdown_after(ttl: int):
 class Node:
     def __init__(self, hostName: str, port: int, m: int, ringSize: int):
         completeHostname = f"{hostName}{port}"
-        hash = getShaHash(completeHostname, ringSize)
-        print("hash: " +str(hash))
+        #hash = getShaHash(completeHostname, ringSize)
+        hash = getShaHex(completeHostname)
+        nodeID = getChordID(hash, ringSize)
+        print("nodeID: " +str(nodeID))
         
-        self.nodeInfo: NodeInfo = NodeInfo(hostname, port, hash)
+        self.nodeInfo: NodeInfo = NodeInfo(hostname, port, nodeID)
 
         self.m = m
         self.ringSize = ringSize
         self.successor = None
         self.predecessor = None
-        self.finger: list[NodeInfo] = [NodeInfo(hostname, port, hash) for _ in range(m)]
+        self.finger: list[NodeInfo] = [NodeInfo(hostname, port, nodeID) for _ in range(m)]
         self.printNodes()
         #self.data = {}
         self.data: dict[int, dict[str, str]] = {}
@@ -111,56 +109,56 @@ class Node:
         self.buildFingerTable()
         self.rpcPost(self.successor, "/repair_hand", {})
 
-        self.notify_entire_ring(True)
+        #self.notify_entire_ring(True)
+        self.notifyRing(True)
+    
+    # def notify_entire_ring(self, do_fix_fingers: bool = True, hop_cap: Optional[int] = None):
+    #     """
+    #     Walk the ring via successors, once, calling /update and /repair_hand.
+    #     """
+    #     cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
+    #     visited = set()
+    #     steps = 0
 
-    def notify_entire_ring(self, do_fix_fingers: bool = True, hop_cap: Optional[int] = None):
-        """
-        Walk the ring via successors, once, calling /update and /repair_hand.
-        """
+    #     curr = self.successor
+    #     if curr is None:
+    #         return {"visited": [], "steps": 0}
 
-        cap = hop_cap if hop_cap is not None else (2 ** self.m + 1)
-        visited = set()
-        steps = 0
+    #     while curr and (curr.hostname, curr.port) not in visited and steps < cap:
+    #         visited.add((curr.hostname, curr.port))
 
-        curr = self.successor
-        if curr is None:
-            return {"visited": [], "steps": 0}
+    #         # ask node to update once
+    #         try:
+    #             self.rpcPost(curr, "/update", {})
+    #         except Exception:
+    #             pass
 
-        while curr and (curr.hostname, curr.port) not in visited and steps < cap:
-            visited.add((curr.hostname, curr.port))
+    #         # ask node to rebuild its finger table once (if you exposed it)
+    #         if do_fix_fingers:
+    #             try:
+    #                 self.rpcPost(curr, "/repair_hand", {})
+    #             except Exception:
+    #                 pass
 
-            # ask node to update once
-            try:
-                self.rpcPost(curr, "/update", {})
-            except Exception:
-                pass
+    #         # move to its successor
+    #         try:
+    #             st = self.rpcGet(curr, "/state")
+    #             nxt = st.get("successor")
+    #             if not nxt:
+    #                 break
+    #             curr = NodeInfo(nxt["hostname"], int(nxt["port"]), int(nxt["nodeID"]))
+    #         except Exception:
+    #             break
 
-            # ask node to rebuild its finger table once (if you exposed it)
-            if do_fix_fingers:
-                try:
-                    self.rpcPost(curr, "/repair_hand", {})
-                except Exception:
-                    pass
+    #         steps += 1
 
-            # move to its successor
-            try:
-                st = self.rpcGet(curr, "/state")
-                nxt = st.get("successor")
-                if not nxt:
-                    break
-                curr = NodeInfo(nxt["hostname"], int(nxt["port"]), int(nxt["nodeID"]))
-            except Exception:
-                break
+    #         # stop once Im back 
+    #         if (curr.hostname, curr.port) == (self.nodeInfo.hostname, self.nodeInfo.port):
+    #             break
 
-            steps += 1
+    #     return {"visited": [f"{h}:{p}" for (h, p) in visited], "steps": steps}
 
-            # stop once Im back 
-            if (curr.hostname, curr.port) == (self.nodeInfo.hostname, self.nodeInfo.port):
-                break
-
-        return {"visited": [f"{h}:{p}" for (h, p) in visited], "steps": steps}
-
-    def walk_ring(self, hop_cap: Optional[int] = None) -> list[NodeInfo]:
+    def walkRing(self, hop_cap: Optional[int] = None) -> list[NodeInfo]:
         """
         Follow successor pointers around until i get back or hit cap
         """
@@ -184,12 +182,26 @@ class Node:
             steps += 1
 
         return nodes
+    
+    def notifyRing(self, repairHand: bool):
+        nodes = self.walkRing()
+        for n in nodes:
+            if (n.hostname != self.nodeInfo.hostname) and (n.port != self.nodeInfo.port):
+                try:
+                    self.rpcPost(n, "/update", {})
+                except:
+                    pass
+                if repairHand:
+                    try:
+                        self.rpcPost(n, "/repair_hand", {})
+                    except:
+                        pass
 
     def get_all_hosts_json(self) -> List[str]:
         """
-        Return a JSON-serializable list of node addresses ("host:port") for /network.
+        Return a JSON list of node addresses ("host:port") for /network.
         """
-        nodes = self.walk_ring()
+        nodes = self.walkRing()
         addresses = [f"{n.hostname}:{n.port}" for n in nodes]
         return addresses
 
@@ -221,16 +233,16 @@ class Node:
             self.successor = self.findSuccessor(self.nodeInfo.nodeID)
         print("succ: " +str(self.successor))
 
-    def iAmOwner(self, targetID) -> bool:
-        '''Checks if the given identifier is this node, or between this node and the predecessor'''
-        # Normal mode
-        if self.predecessor.nodeID < self.nodeInfo.nodeID:
-            return self.predecessor.nodeID < targetID <= self.nodeInfo.nodeID
-        # Wrap-around mode
-        if self.predecessor.nodeID > self.nodeInfo.nodeID:
-            return targetID > self.predecessor.nodeID or targetID <= self.nodeInfo.nodeID
-        # If it is not in here
-        return False
+    # def iAmOwner(self, targetID) -> bool:
+    #     '''Checks if the given identifier is this node, or between this node and the predecessor'''
+    #     # Normal mode
+    #     if self.predecessor.nodeID < self.nodeInfo.nodeID:
+    #         return self.predecessor.nodeID < targetID <= self.nodeInfo.nodeID
+    #     # Wrap-around mode
+    #     if self.predecessor.nodeID > self.nodeInfo.nodeID:
+    #         return targetID > self.predecessor.nodeID or targetID <= self.nodeInfo.nodeID
+    #     # If it is not in here
+    #     return False
 
     def isWithinInterval(self, targetID: int, startID: int, endID: int) -> bool:
         '''Checks if the the given identifier is within the given start and end interval'''
@@ -282,8 +294,8 @@ class Node:
     def storeValue(self, key, value) -> bool:
         #keyID = getShaHash(key, self.ringSize)
 
-        full_hex = full_sha1_hex(key)
-        keyID = chord_id_m_from_full_hex(full_hex, self.ringSize)
+        full_hex = getShaHex(key)
+        keyID = getChordID(full_hex, self.ringSize)
 
         owner = self.findSuccessor(keyID)
         # Check if I am the owner
@@ -305,8 +317,8 @@ class Node:
         
     def getValue(self, key) -> Optional[str]:
         #keyID = getShaHash(key, self.ringSize)
-        full_hex = full_sha1_hex(key)
-        keyID = chord_id_m_from_full_hex(full_hex, self.ringSize)
+        full_hex = getShaHex(key)
+        keyID = getChordID(full_hex, self.ringSize)
         owner = self.findSuccessor(keyID)
         if (owner.hostname == self.nodeInfo.hostname) and (owner.port == self.nodeInfo.port):
             #return self.data.get(keyID, {}).get(key)
