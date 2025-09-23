@@ -73,6 +73,7 @@ echo "Servers are running on:"
 echo "$JSON_STR"
 echo "Servers will automatically stop in $TTL seconds"
 echo "Running testscript on $CONTACTNODE"
+curl -i $CONTACTNODE/network
 #python3 chord-tester.py "$CONTACTNODE"
 #./clean.sh
 echo "Run script done"
