@@ -563,7 +563,7 @@ if __name__ == '__main__':
             if not (contactPort):
                 raise ValueError("Need a connecting node port number")
             completeHostname: str = str(contactHostname) + str(contactPort)
-            contactNode = NodeInfo(contactHostname, contactPort, getShaHash(completeHostname, ringSize))
+            contactNode = NodeInfo(contactHostname, contactPort, getChordID(getShaHex(completeHostname), ringSize))
             print("contact node: " + str(contactNode.hostname) + " " + str(contactNode.port) + " " + str(contactNode.nodeID)) 
             node.joinRing(contactNode)
             #initialNodes = json.loads(contactNode)

@@ -61,7 +61,7 @@ for host in $HOSTS; do
     first=0
   fi
   if [ $first -eq 0 ]; then
-    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE > $CWD/tmp.log 2>&1 &"
+    ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $port $M $TTL join $FIRSTNODE $CONTPORT > $CWD/tmp.log 2>&1 &"
     JSON_STR="$JSON_STR ${host}:${port}"
   fi
   sleep 1
