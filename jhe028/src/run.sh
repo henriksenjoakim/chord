@@ -57,8 +57,8 @@ for host in $HOSTS; do
   if [ $first -eq 1 ]; then
     FIRSTNODE=$host
     ssh -f "$host" "cd $CWD; source venv/bin/activate; python server.py $CONTPORT $M $TTL create > $CWD/tmp.log 2>&1 &"
-    JSON_STR="${host}:${port}"
-    CONTACTNODE="${FIRSTNODE}:${port}"
+    JSON_STR="${host}:${CONTPORT}"
+    CONTACTNODE="${FIRSTNODE}:${CONTPORT}"
     first=0
   fi
   if [ $first -eq 0 ]; then
